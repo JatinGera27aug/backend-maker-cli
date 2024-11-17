@@ -87,7 +87,7 @@ Here is the folder structure for the generated project:
 my-backend-project/
 │
 ├── config/                 # Database, middleware, and general config files
-│   ├── db.js               # Database connection logic
+│   ├── dbMongo.js          # Database connection logic
 │   ├── multer.js           # Multer configuration for file uploads
 │
 ├── controllers/             # Controllers for your routes
@@ -109,6 +109,7 @@ my-backend-project/
 ├── .gitignore               # Git ignore file to prevent sensitive files from being tracked
 ├── app.js                   # Main server file to start your application
 ├── package.json             # NPM package configuration
+
 
 ```
 

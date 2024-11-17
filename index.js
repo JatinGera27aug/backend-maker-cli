@@ -27,7 +27,7 @@ const createPackageJson = (projectPath) => {
 
 const installDependencies = (dbChoice) => {
     console.log('Installing dependencies...');
-    const commonDependencies = ['express', 'jsonwebtoken', 'dotenv', 'cors', 'multer', 'bcryptjs', 'express-validator', 'nodemailer'];
+    const commonDependencies = ['express', 'jsonwebtoken', 'dotenv', 'cors', 'multer', 'bcrypt', 'express-validator', 'nodemailer'];
     if (!dbChoice) execSync(`npm install ${commonDependencies.join(' ')}`, { stdio: 'inherit' });
     else{
         const dbDependencies =
@@ -68,7 +68,7 @@ app.use(express.json());
 app.set(express.urlencoded({ extended: true }));
 const cors = require('cors');
 app.use(cors());
-const connectDB = require('./config/db');
+const connectDB = require('./config/dbMongo.js');
 connectDB();
 const sampleRoutes = require('./routes/sampleRoutes.js')
 
@@ -121,8 +121,7 @@ const authSchema = new mongoose.Schema(
       type: String,
       required: [true, "Email is required"],
       unique: true,
-      trim: true,
-      match: [/\S+@\S+\.\S+/, "Please use a valid email address"],
+      trim: true
     },
     password: {
       type: String,
@@ -239,8 +238,8 @@ const validationAuthMiddlewareContent =
     return res.status(400).json({ message: "Username must be at least 3 characters long" });
   }
 
-  if (!email || !/\S+@\S+\.\S+/.test(email)) {
-    return res.status(400).json({ message: "A valid email is required" });
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
   }
 
   if (!password || password.trim().length < 4) {
@@ -272,8 +271,9 @@ router.post("/register", validateAuthInput, AuthController.userRegistration);
 // User Login
 router.post("/login", validateAuthInput, AuthController.userLogin);
 
-// Protected Route
-router.get('/get/allUsers', authMiddleware, AuthController.getAllUsers);
+// Protected Route Example
+// router.get('/get/allUsers', authMiddleware, AuthController.getAllUsers);
+
 // -- replace getAllUsers with your actual controller function --
 module.exports = router;
 
@@ -509,20 +509,22 @@ CMD ["node", "app.js"]`;
     else if (feature.toLowerCase() === 'mongodb') {
         console.log('Adding MongoDB configuration...');
         generateMongoDBConfig(); // Call the existing function
+        installDependencies("mongodb");
     } 
-    else if (feature.toLowerCase() === 'mysql') {
+    else if (feature.toLowerCase() === 'mysql' || feature.toLowerCase() === 'mysql2'){
         console.log('Adding MySQL configuration...');
         generateMySQLConfig(); // Call the existing function
+        installDependencies("mysql2");
     }
     else if (feature.toLowerCase() === 'multer'){
         console.log('Adding Multer configuration...');
         generateMulterConfig(); 
     }
-    else if (feature.toLowerCase() === 'api-rate-limiter'){
+    else if (feature.toLowerCase() === 'api-rate-limiter' || feature.toLowerCase() === 'rate-limiter' || feature.toLowerCase() === 'api-rate-limiter-middleware'){
         console.log('Adding API rate limiter middleware...');
         generateRateLimiterMiddleware(); 
     }
-    else if (feature.toLowerCase() === 'email-sender'){
+    else if (feature.toLowerCase() === 'email-sender' || feature.toLowerCase() === 'email-sender-middleware' || feature.toLowerCase() === 'nodemailer'){
         console.log('Adding Nodemailer configuration...');
         generateEmailSender();
     }

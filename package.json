@@ -1,0 +1,30 @@
+{
+    "name": "backend-maker-cli",
+    "version": "1.0.0",
+    "description": "A CLI tool to set up Node.js backend projects with optional features like MongoDB, MySQL, Docker, and Multer.",
+    "main": "index.js",
+    "bin": {
+      "backend-maker": "./cli.js"
+    },
+    "scripts": {
+      "test": "echo \"No test specified\" && exit 0"
+    },
+    "keywords": [
+        "cli",
+        "backend",
+        "generator",
+        "node",
+        "express",
+        "mongodb",
+        "node"
+    ],
+    "author": "Jatin Gera",
+    "license": "MIT",
+    "dependencies": {
+      "mongodb": "^4.4.0",
+      "dotenv": "^10.0.0",
+      "commander": "^10.0.0"
+    },
+    "devDependencies": {}
+  }
+  

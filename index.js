@@ -315,7 +315,7 @@ dotenv.config()
   
 function connectToDb() {
     try{
-        mongoose.connect("mongodb+srv://jat78901:jat78901@cluster0.n7q0mv9.mongodb.net/Blog")
+        mongoose.connect(process.env.MONGO_URI)
         .then(() => console.log('connected to db'))
     } catch(err){
         console.error(\`Error: \${err.message}\`);

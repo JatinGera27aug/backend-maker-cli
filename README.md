@@ -78,10 +78,14 @@ After you initialize your project, you can add optional features as you require.
 For example, to add Multer (for file uploading), run:
 
 ```
+backend-maker add multer
+``` 
+
+This will generate a Dockerfile for your Node.js project:
+
+```
 backend-maker add docker
 ```
-
-This will generate a Dockerfile for your Node.js project
 
 To learn more about available features, you can use the `--help` option:
 
@@ -133,6 +137,8 @@ my-backend-project/
 │   ├── dbMongo.js          # Database connection logic
 │   ├── multer.js           # Multer configuration for file uploads
 |   ├── redis.js            # Redis configuration for caching
+|   ├── cloudinary.js       # Cloudinary configuration for image, video uploads on 
+|                             cloud
 |
 |── constants/             # Constants for your application
 │
@@ -159,6 +165,7 @@ my-backend-project/
 ├── .gitignore               # Git ignore file to prevent sensitive files from being tracked
 ├── app.js                   # Main server file to start your application
 ├── package.json             # NPM package configuration
+├── Dockerfile               # Dockerfile for containerizing your node app
 
 
 ```
@@ -351,6 +358,51 @@ const sendEmail = (to, subject, text, html) => {
 };
 
 module.exports = sendEmail;
+```
+
+### 7. MYSQL-SEQUELIZE Connection (`config/dbMysql.js`)
+```js
+const { Sequelize } = require("sequelize");
+
+// Configure Sequelize instance with options
+const sequelize = new Sequelize(process.env.MYSQL_URI, {
+    dialect: "mysql",
+    logging: process.env.SEQUELIZE_LOGGING === "true" ? console.log : false, // Toggle query logging
+    pool: {
+        max: 5, // Maximum number of connections in pool
+        min: 0, // Minimum number of connections in pool
+        acquire: 30000, // Maximum time (ms) to get a connection
+        idle: 10000, // Maximum time (ms) a connection can be idle
+    },
+    retry: {
+        max: 3, // Retry connection attempts
+    },
+});
+
+// Async function to connect to the database
+const connectDB = async () => {
+    try {
+        await sequelize.authenticate();
+        console.log("✅ MySQL Connected successfully.");
+    } catch (err) {
+        console.error("❌ Unable to connect to the database. Please check the connection details:", err.message);
+
+        // Retry mechanism for better fault tolerance
+        console.error("⚠️ Retrying database connection...");
+        setTimeout(async () => {
+            try {
+                await sequelize.authenticate();
+                console.log("✅ MySQL Reconnected successfully after retry.");
+            } catch (retryErr) {
+                console.error("❌ Retry failed. Exiting application:", retryErr.message);
+                process.exit(1); // Exit the application in case of persistent failure
+            }
+        }, 5000);
+    }
+};
+
+// Export both the Sequelize instance and the connection function
+module.exports = { sequelize, connectDB };
 ```
 
 ---

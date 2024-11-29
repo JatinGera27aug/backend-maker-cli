@@ -22,7 +22,7 @@ const createPackageJson = (projectPath) => {
 
 // const installDependencies = () => {
 //     console.log('Installing dependencies...');
-//     const dependencies = ['express', 'mongoose', 'jsonwebtoken', 'dotenv', 'cors', 'multer', 'mysql2', 'bcryptjs', 'express-validator', 'nodemailer', 'api-rate-limiter-middleware'];
+//     const dependencies = ['express', 'mongoose', 'jsonwebtoken', 'dotenv', 'cors', 'nodemon', 'mysql2', 'bcryptjs', 'express-validator', 'nodemailer', 'api-rate-limiter-middleware'];
 //     execSync(`npm install ${dependencies.join(' ')}`, { stdio: 'inherit' });
 //     console.log('Dependencies installed successfully!');
 //   };
@@ -41,7 +41,7 @@ const installDependencies = (dbChoice) => {
 
 // Function to create backend structure
 const createBackendStructure = () => {
-    const folders = ['models', 'controllers', 'routes', 'middleware', 'utils', 'config', 'public', 'constants', 'api-rate-limiter-middleware'];
+    const folders = ['models', 'controllers', 'routes', 'middleware', 'utils', 'config', 'public', 'constants'];
   
     // to create common files
     folders.forEach((folder) => {
@@ -70,9 +70,10 @@ app.use(express.json());
 app.set(express.urlencoded({ extended: true }));
 const cors = require('cors');
 app.use(cors());
-const connectDB = require('./config/dbMongo.js');
-connectDB();
-const sampleRoutes = require('./routes/sampleRoutes.js')
+// const connectDB = require('./config/dbMongo.js'); // add db url in .env file
+// connectDB();
+
+// const sampleRoutes = require('./routes/sampleRoutes.js')
 
 const PORT = 8000 || process.env.PORT;
 

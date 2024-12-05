@@ -22,14 +22,14 @@ const createPackageJson = (projectPath) => {
 
 // const installDependencies = () => {
 //     console.log('Installing dependencies...');
-//     const dependencies = ['express', 'mongoose', 'jsonwebtoken', 'dotenv', 'cors', 'nodemon', 'mysql2', 'bcryptjs', 'express-validator', 'nodemailer', 'api-rate-limiter-middleware'];
+//     const dependencies = ['express', 'mongoose', 'jsonwebtoken', 'dotenv', 'cors', 'multer', 'mysql2', 'bcryptjs', 'express-validator', 'nodemailer', 'api-rate-limiter-middleware'];
 //     execSync(`npm install ${dependencies.join(' ')}`, { stdio: 'inherit' });
 //     console.log('Dependencies installed successfully!');
 //   };
 
 const installDependencies = (dbChoice) => {
     console.log('Installing dependencies...');
-    const commonDependencies = ['express', 'jsonwebtoken', 'dotenv', 'cors', 'multer', 'bcrypt', 'express-validator'];
+    const commonDependencies = ['express', 'jsonwebtoken', 'dotenv', 'cors', 'nodemon', 'bcrypt', 'express-validator'];
     if (!dbChoice) execSync(`npm install ${commonDependencies.join(' ')}`, { stdio: 'inherit' });
     else{
         const dbDependencies =
@@ -70,7 +70,7 @@ app.use(express.json());
 app.set(express.urlencoded({ extended: true }));
 const cors = require('cors');
 app.use(cors());
-// const connectDB = require('./config/dbMongo.js'); // add db url in .env file
+// const connectDB = require('./config/dbMongo.js');  // provide db url in .env file
 // connectDB();
 
 // const sampleRoutes = require('./routes/sampleRoutes.js')
@@ -283,7 +283,7 @@ module.exports = router;
 `
 const RoutesFolderPath = path.join(projectPath, 'routes');
   fs.writeFileSync(path.join(RoutesFolderPath, 'sampleRoutes.js'), sampleRoutesContent);
-  console.log('Generated middleware/sampleRoutes.js');
+  console.log('Generated routes/sampleRoutes.js');
 
 
 
@@ -860,6 +860,465 @@ const utilsFolderPath = path.join(projectPath, 'utils');
 }
 
 
+// adding passport js functionality
+const implementPassportLocal = () => {
+  execSync('npm install passport express-session passport-local', { stdio: 'inherit' });
+  console.log("passport installed successfully.");
+
+  const passportMiddlewareContent = 
+`const passport = require("passport");
+const LocalStrategy = require("passport-local").Strategy;
+const Demo = require("../models/Demo"); // Replace with your Model
+const session = require("express-session");
+
+/**
+ * Configure Passport Local Strategy
+ */
+passport.use(
+  new LocalStrategy(async (username, password, done) => {
+    try {
+      const user = await Demo.findOne({ username });
+      if (!user) return done(null, false, { message: "User not found" });
+
+      if (!user.password == password) return done(null, false, { message: "Incorrect password" });
+    
+      // If user is found and password is correct, return user
+      return done(null, user);
+    } catch (err) {
+      return done(err);
+    }
+  })
+);
+
+// Serialize user ID into session
+passport.serializeUser((user, done) => done(null, user.id));
+
+// Deserialize user from ID stored in session
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await Demo.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
+});
+
+/**
+ * Middleware to initialize Passport and session
+ */
+const initializePassportSession = (app) => {    // replace app with your express instance
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "default_secret",
+      resave: false,
+      saveUninitialized: false,
+    })
+  );
+  app.use(passport.initialize());
+  app.use(passport.session());
+};
+
+// Middleware to protect routes
+ 
+const isAuthenticated = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).send("Unauthorized");
+};
+
+module.exports = { initializePassportSession, isAuthenticated };
+
+`
+
+const middlewareFolderPath = path.join(projectPath, 'middleware');
+  fs.writeFileSync(path.join(middlewareFolderPath, 'passport-local.js'), passportMiddlewareContent);
+  console.log('Generated middleware/passport-local.js');
+}
+
+
+// adding passport-google
+const implementPassportGoogle = () => {
+  execSync('npm install passport express-session passport-google-oauth20', { stdio: 'inherit' });
+  console.log("passport installed successfully.");
+
+  const passportMiddlewareContent = 
+`const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+require("dotenv").config();
+
+// configuration to be done in .env file
+const configureGooglePassport = () => {
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+    const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || "http://localhost:8000/auth/google/callback";
+
+    passport.use(
+        new GoogleStrategy(
+            {
+                clientID: GOOGLE_CLIENT_ID,
+                clientSecret: GOOGLE_CLIENT_SECRET,
+                callbackURL: GOOGLE_CALLBACK_URL,
+            },
+            async (accessToken, refreshToken, profile, done) => {
+                // Save user profile to database here, if needed
+                // Example: const user = await User.findOrCreate({ googleId: profile.id });
+                return done(null, profile);
+            }
+        )
+    );
+
+    passport.serializeUser((user, done) => {
+        done(null, user);
+    });
+
+    passport.deserializeUser((user, done) => {
+        done(null, user);
+    });
+};
+
+
+const initializeGoogleAuth = (app) => {
+    const session = require("express-session");
+
+    app.use(
+        session({
+            secret: process.env.SESSION_SECRET || "default_secret",
+            resave: false,
+            saveUninitialized: false,
+        })
+    );
+    app.use(passport.initialize());
+    app.use(passport.session());
+};
+
+module.exports = { configureGooglePassport, initializeGoogleAuth, passport };
+
+
+`
+
+const middlewareFolderPath = path.join(projectPath, 'middleware');
+  fs.writeFileSync(path.join(middlewareFolderPath, 'passport-google.js'), passportMiddlewareContent);
+  console.log('Generated middleware/passport-google.js');
+
+
+const google_OAuth_RoutesContent = 
+`const express = require("express");
+const { passport } = require("../middleware/passport-google");
+
+const router = express.Router();
+
+// Login with Google
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+// Google OAuth callback
+router.get(
+    "/google/callback",
+    passport.authenticate("google", { failureRedirect: "/" }),
+    (req, res) => {
+        res.redirect("/profile");
+    }
+);
+
+// Profile route (protected)
+router.get("/profile", (req, res) => {
+    if (req.isAuthenticated()) {
+        res.send("Welcome", req.user.displayName);
+    } else {
+        res.redirect("/");
+    }
+});
+
+// Logout route
+router.get("/logout", (req, res) => {
+    req.logout((err) => {
+        if (err) {
+            console.error("Logout error:", err);
+            return res.status(500).send("Error logging out");
+        }
+        res.redirect("/");
+    });
+});
+
+module.exports = router;
+
+`
+
+const RoutesFolderPath = path.join(projectPath, 'routes');
+  fs.writeFileSync(path.join(RoutesFolderPath, 'Google-0Auth-SampleRoutes.js'), google_OAuth_RoutesContent);
+  console.log('Generated routes/Google-0Auth-SampleRoutes.js');
+
+
+// env content
+const envContent = 
+`GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:8000/auth/google/callback
+SESSION_SECRET=your-session-secret
+
+`;
+  fs.appendFileSync(path.join(projectPath, '.env'), envContent);
+  console.log('Generated .env file');
+
+}
+
+// adding passport-FaceBook
+const implementPassportFacebook = () => {
+
+  // Install dependencies
+  execSync('npm install passport express-session passport-facebook', { stdio: 'inherit' });
+  console.log("Passport-Facebook installed successfully.");
+
+  // Middleware content for Passport-Facebook
+  const facebookMiddlewareContent = 
+`const passport = require("passport");
+const FacebookStrategy = require("passport-facebook").Strategy;
+require("dotenv").config();
+
+const configureFacebookPassport = () => {
+    const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID;
+    const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET;
+    const FACEBOOK_CALLBACK_URL = process.env.FACEBOOK_CALLBACK_URL || "http://localhost:8000/auth/facebook/callback";
+
+    passport.use(
+        new FacebookStrategy(
+            {
+                clientID: FACEBOOK_APP_ID,
+                clientSecret: FACEBOOK_APP_SECRET,
+                callbackURL: FACEBOOK_CALLBACK_URL,
+                profileFields: ["id", "emails", "name"], // Request additional fields if needed
+            },
+            async (accessToken, refreshToken, profile, done) => {
+                // Save user profile to database here, if needed
+                return done(null, profile);
+            }
+        )
+    );
+
+    passport.serializeUser((user, done) => {
+        done(null, user);
+    });
+
+    passport.deserializeUser((user, done) => {
+        done(null, user);
+    });
+};
+
+const initializeFacebookAuth = (app) => {
+    const session = require("express-session");
+
+    app.use(
+        session({
+            secret: process.env.SESSION_SECRET || "default_secret",
+            resave: false,
+            saveUninitialized: false,
+        })
+    );
+    app.use(passport.initialize());
+    app.use(passport.session());
+};
+
+module.exports = { configureFacebookPassport, initializeFacebookAuth, passport };
+`;
+
+  const middlewareFolderPath = path.join(process.cwd(), 'middleware');
+  if (!fs.existsSync(middlewareFolderPath)) {
+    fs.mkdirSync(middlewareFolderPath);
+  }
+  fs.writeFileSync(path.join(middlewareFolderPath, 'passport-facebook.js'), facebookMiddlewareContent);
+  console.log('Generated middleware/passport-facebook.js');
+
+  // Routes content for Facebook OAuth
+  const facebookOAuthRoutesContent = 
+`const express = require("express");
+const { passport } = require("../middleware/passport-facebook");
+
+const router = express.Router();
+
+// Login with Facebook
+router.get("/facebook", passport.authenticate("facebook", { scope: ["email"] }));
+
+// Facebook OAuth callback
+router.get(
+    "/facebook/callback",
+    passport.authenticate("facebook", { failureRedirect: "/" }),
+    (req, res) => {
+        res.redirect("/profile");
+    }
+);
+
+// Profile route (protected)
+router.get("/profile", (req, res) => {
+    if (req.isAuthenticated()) {
+        res.send("Welcome", req.user.displayName || req.user.name.givenName);
+    } else {
+        res.redirect("/");
+    }
+});
+
+// Logout route
+router.get("/logout", (req, res) => {
+    req.logout((err) => {
+        if (err) {
+            console.error("Logout error:", err);
+            return res.status(500).send("Error logging out");
+        }
+        res.redirect("/");
+    });
+});
+
+module.exports = router;
+`;
+
+  const routesFolderPath = path.join(process.cwd(), 'routes');
+  if (!fs.existsSync(routesFolderPath)) {
+    fs.mkdirSync(routesFolderPath);
+  }
+  fs.writeFileSync(path.join(routesFolderPath, 'Facebook-Auth-SampleRoutes.js'), facebookOAuthRoutesContent);
+  console.log('Generated routes/Facebook-Auth-SampleRoutes.js');
+
+  // .env content for Facebook
+  const envContent = 
+`FACEBOOK_APP_ID=your-facebook-app-id
+FACEBOOK_APP_SECRET=your-facebook-app-secret
+FACEBOOK_CALLBACK_URL=http://localhost:8000/auth/facebook/callback
+SESSION_SECRET=your-session-secret
+
+`;
+  fs.appendFileSync(path.join(process.cwd(), '.env'), envContent);
+  console.log('Generated .env file');
+};
+
+
+// adding passport-GITHUB 
+const implementPassportGitHub = () => {
+  // Install dependencies
+  execSync('npm install passport express-session passport-github2', { stdio: 'inherit' });
+  console.log("Passport-GitHub installed successfully.");
+
+  // Middleware content for Passport-GitHub
+  const githubMiddlewareContent = 
+`const passport = require("passport");
+const GitHubStrategy = require("passport-github2").Strategy;
+require("dotenv").config();
+
+const configureGitHubPassport = () => {
+    const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+    const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+    const GITHUB_CALLBACK_URL = process.env.GITHUB_CALLBACK_URL || "http://localhost:8000/auth/github/callback";
+
+    passport.use(
+        new GitHubStrategy(
+            {
+                clientID: GITHUB_CLIENT_ID,
+                clientSecret: GITHUB_CLIENT_SECRET,
+                callbackURL: GITHUB_CALLBACK_URL,
+            },
+            async (accessToken, refreshToken, profile, done) => {
+                // Save user profile to database here, if needed
+                return done(null, profile);
+            }
+        )
+    );
+
+    passport.serializeUser((user, done) => {
+        done(null, user);
+    });
+
+    passport.deserializeUser((user, done) => {
+        done(null, user);
+    });
+};
+
+const initializeGitHubAuth = (app) => {
+    const session = require("express-session");
+
+    app.use(
+        session({
+            secret: process.env.SESSION_SECRET || "default_secret",
+            resave: false,
+            saveUninitialized: false,
+        })
+    );
+    app.use(passport.initialize());
+    app.use(passport.session());
+};
+
+module.exports = { configureGitHubPassport, initializeGitHubAuth, passport };
+`;
+
+  const middlewareFolderPath = path.join(process.cwd(), 'middleware');
+  if (!fs.existsSync(middlewareFolderPath)) {
+    fs.mkdirSync(middlewareFolderPath);
+  }
+  fs.writeFileSync(path.join(middlewareFolderPath, 'passport-github.js'), githubMiddlewareContent);
+  console.log('Generated middleware/passport-github.js');
+
+  // Routes content for GitHub OAuth
+  const githubOAuthRoutesContent = 
+`const express = require("express");
+const { passport } = require("../middleware/passport-github");
+
+const router = express.Router();
+
+// Login with GitHub
+router.get("/github", passport.authenticate("github", { scope: ["user:email"] }));
+
+// GitHub OAuth callback
+router.get(
+    "/github/callback",
+    passport.authenticate("github", { failureRedirect: "/" }),
+    (req, res) => {
+        res.redirect("/profile");
+    }
+);
+
+// Profile route (protected)
+router.get("/profile", (req, res) => {
+    if (req.isAuthenticated()) {
+        res.send("Welcome", req.user.username);
+    } else {
+        res.redirect("/");
+    }
+});
+
+// Logout route
+router.get("/logout", (req, res) => {
+    req.logout((err) => {
+        if (err) {
+            console.error("Logout error:", err);
+            return res.status(500).send("Error logging out");
+        }
+        res.redirect("/");
+    });
+});
+
+module.exports = router;
+`;
+
+  const routesFolderPath = path.join(process.cwd(), 'routes');
+  if (!fs.existsSync(routesFolderPath)) {
+    fs.mkdirSync(routesFolderPath);
+  }
+  fs.writeFileSync(path.join(routesFolderPath, 'GitHub-Auth-SampleRoutes.js'), githubOAuthRoutesContent);
+  console.log('Generated routes/GitHub-Auth-SampleRoutes.js');
+
+  // .env content for GitHub
+  const envContent = 
+`GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+GITHUB_CALLBACK_URL=http://localhost:8000/auth/github/callback
+SESSION_SECRET=your-session-secret
+
+`;
+  fs.appendFileSync(path.join(process.cwd(), '.env'), envContent);
+  console.log('Generated .env file');
+};
+
+
+
+
+
 program
   .name('backend-maker')
   .description('CLI to generate backend structure and snippets')
@@ -897,7 +1356,7 @@ program
 // Add feature command
 program
   .command('add <feature>')
-  .description('Add optional features (e.g., api-rate-limiter,redis, docker, multer, cloudinary, email-sender, s3-aws-upload, mongodb, mysql)')
+  .description('Add optional features (e.g., api-rate-limiter, redis, docker, passport.js(local, google, github, facebook), multer, cloudinary, email-sender, s3-aws-upload, mongodb, mysql)')
   .action((feature) => {
     if (feature.toLowerCase() === 'docker') {
       const dockerContent = `
@@ -964,6 +1423,51 @@ CMD ["node", "app.js"]`;
         console.log('Adding Cloudinary configuration...');
         generateCloudinaryConfig();
     }
+    else if (feature.toLowerCase() === 'passport.js' || feature.toLowerCase() === 'passport-local' || feature.toLowerCase() === 'passport'){
+      console.log('Adding Passport.js...');
+      // implementRedis();
+    inquirer.prompt([
+        {
+          type: 'list',
+          name: 'Passport_js_Providers',
+          message: 'Which Passport js provider would you like to use? ',
+          choices: ['passport-google', 'passport-local', 'passport-facebook','passport-github'],
+        },
+      ])
+      .then((answers) => {
+        if (answers.Passport_js_Providers === 'passport-local') {
+          console.log('adding middlewares for passport-local');
+          implementPassportLocal(); 
+        } 
+        else if( answers.Passport_js_Providers === 'passport-google'){
+          console.log('adding middlewares and Sample Routes for passport-google');
+          implementPassportGoogle();
+        }
+        else if( answers.Passport_js_Providers === 'passport-facebook'){
+          console.log('adding middlewares and Sample Routes for passport-facebook');
+          implementPassportFacebook();
+        }
+        else if( answers.Passport_js_Providers === 'passport-github'){
+          console.log('adding middlewares and Sample Routes for passport-github');
+          implementPassportGitHub();
+        }
+        else{
+          console.log('adding middleware for passport-google')
+        }
+        });
+   } 
+    else if(feature.toLowerCase() === 'passport-google'){
+        console.log('adding middlewares and Sample Routes for passport-google');
+        implementPassportGoogle();
+    }
+    else if(feature.toLowerCase() === 'passport-facebook'){
+        console.log('adding middlewares and Sample Routes for passport-facebook');
+        implementPassportFacebook();
+    }
+    else if(feature.toLowerCase() === 'passport-github'){
+      console.log('adding middlewares and Sample Routes for passport-github');
+      implementPassportGitHub();
+    }
     else {
       console.log(`Feature "${feature}" not recognized.`);
     }
@@ -975,5 +1479,7 @@ program.parse();
 // if (addCommand) {
 //   console.log(`Description for 'add' command: ${addCommand.description()}`);
 // }
+
+
 
 

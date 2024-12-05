@@ -3,8 +3,6 @@
 This CLI tool is designed to streamline setting up a Node.js backend project. It includes features for setting up database configurations, adding necessary middleware, and initializing a project structure for ease of development 
 
 
-# Backend Maker CLI
-
 ![npm](https://img.shields.io/npm/v/backend-maker-cli)
 ![npm](https://img.shields.io/npm/dt/backend-maker-cli)
 ![npm](https://img.shields.io/npm/dw/backend-maker-cli)
@@ -116,7 +114,40 @@ You can choose between the **official `redis` package** and the **`ioredis` pack
 
 ---
 
-### 4. Docker Initialization (In Progress)
+### 4. Google OAuth Integration
+This feature provides an easy and secure way to implement Google OAuth 2.0 for user authentication in your application. With this integration, users can sign in using their Google accounts, reducing the need for creating separate credentials for your application.
+
+**Key Features**
+• Secure Authentication: Allows users to log in via their Google accounts, leveraging OAuth 2.0 for enhanced security.
+
+• Session Management: Automatically manages user sessions with serialization and deserialization logic.
+
+•  Customizable Routes: Predefined routes for login, callback, profile, and logout, making it easy to plug and play.
+
+*USAGE*
+
+```
+backend-maker add passport-google
+```
+
+Integrate with Your App
+
+```
+const { configureGooglePassport, initializeGoogleAuth } = require('./middlewares/passport-google');
+const googleRoutes = require('./routes/Google-0Auth-SampleRoutes');
+
+const app = express();
+configureGooglePassport();
+initializeGoogleAuth(app);
+
+app.use('/auth', googleRoutes);
+```
+
+**Passport-local, Passport-GitHub, Passport-Facebook  also available now** ✅
+
+---
+
+### 5. Docker Initialization (In Progress)
 
 To initialize Docker configurations for your project, run:
 
@@ -150,6 +181,8 @@ my-backend-project/
 │
 ├── middlewares/
 |  ├── authMiddleware.js
+│  ├── passport-google.js    # Passport Google strategy
+│  ├── passport-github.js    # Passport GitHub strategy
 |
 ├── routes/                  # Routes for your application
 │   ├── sampleRoutes.js      # Example routes for user-related endpoints
